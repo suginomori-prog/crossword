@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>クロスワードパズル</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --cs: 36px; }
+
+body {
+  font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
+  background: #fef9f0;
+  min-height: 100vh;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow-x: hidden;
+}
+
+header {
+  background: #c0704a;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px;
+  background: #fce0cc;
+}
+.toolbar button {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+.btn-new  { background: #c0704a; color: white; }
+.btn-hint { background: #4a9a4a; color: white; }
+
+/* ---- GRID ---- */
+#grid-area {
+  display: flex;
+  justify-content: center;
+  padding: 8px 8px 4px;
+  overflow-x: auto;
+}
+
+#loading {
+  padding: 30px;
+  color: #888;
+  font-size: 16px;
+  text-align: center;
+}
+
+table#grid {
+  border-collapse: collapse;
+  border: 2px solid #444;
+}
+
+table#grid td {
+  width: var(--cs);
+  height: var(--cs);
+  border: 1px solid #aaa;
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+  background: white;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+table#grid td.black {
+  background: #333;
+  border-color: #333;
+  cursor: default;
+}
+
+table#grid td.word-hl { background: #b8d8f8; }
+table#grid td.cell-hl { background: #4da8e8; }
+
+.num {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: calc(var(--cs) * 0.22);
+  color: #555;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.letter {
+  font-size: calc(var(--cs) * 0.56);
+  font-weight: bold;
+  line-height: var(--cs);
+  display: block;
+  pointer-events: none;
+}
+.letter.wrong { color: #cc2200; }
+
+/* ---- CURRENT CLUE ---- */
+#clue-display {
+  margin: 5px 8px;
+  padding: 8px 10px;
+  background: #fffaf0;
+  border-left: 4px solid #c0704a;
+  font-size: 15px;
+  color: #333;
+  min-height: 38px;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+}
+#clue-display .clue-label {
+  font-weight: bold;
+  color: #c0704a;
+  margin-right: 4px;
+}
+
+/* ---- CLUES LIST ---- */
+#clues-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 8px;
+  padding: 4px 8px 6px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.clue-item {
+  font-size: 12px;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  border-bottom: 1px solid #eee;
+}
+.clue-item.active { background: #b8d8f8; }
+.clue-num { font-weight: bold; color: #c0704a; min-width: 18px; flex-shrink: 0; }
+.clue-text { color: #333; }
+
+/* ---- ACTION BAR ---- */
+#action-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #c8ccd8;
+  padding: 6px 8px 10px;
+  border-top: 2px solid #9aa;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+#action-bar button {
+  background: white;
+  border: 1px solid #9aa;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: bold;
+  padding: 8px 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 2px 0 #9aa;
+}
+#action-bar button:active { transform: translateY(2px); box-shadow: none; }
+#action-bar button.sp { background: #a8aab8; }
+
+/* ---- SPACER for action bar ---- */
+#kb-spacer { height: 70px; }
+
+/* ---- DONE OVERLAY ---- */
+#done {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+#done.show { display: flex; }
+.done-box {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  text-align: center;
+  max-width: 280px;
+  width: 90%;
+}
+.done-icon { font-size: 56px; margin-bottom: 8px; }
+.done-title { font-size: 22px; font-weight: bold; color: #c0704a; margin-bottom: 6px; }
+.done-sub { font-size: 14px; color: #666; margin-bottom: 16px; }
+.done-btn {
+  background: #c0704a; color: white;
+  font-size: 16px; padding: 10px 24px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<header>🌸 クロスワードパズル</header>
+
+<div class="toolbar">
+  <button class="btn-new" onclick="newGame()">🔄 新しい問題</button>
+  <button class="btn-hint" onclick="useHint()">💡 ヒント</button>
+</div>
+
+<div id="grid-area">
+  <div id="loading">問題を作っています…</div>
+  <table id="grid" style="display:none"></table>
+</div>
+
+<div id="clue-display">マスをタップして選んでください</div>
+
+<div id="clues-panel">
+  <div>
+    <div class="section-title">→ 横のカギ</div>
+    <div id="across-list"></div>
+  </div>
+  <div>
+    <div class="section-title">↓ 縦のカギ</div>
+    <div id="down-list"></div>
+  </div>
+</div>
+
+<div id="kb-spacer"></div>
+
+<div id="done">
+  <div class="done-box">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">完成！おめでとう！</div>
+    <div class="done-sub" id="done-sub">全部正解！</div>
+    <button class="done-btn" onclick="newGame()">もう一度あそぶ</button>
+  </div>
+</div>
+
+<!-- 操作バー（キーボードはスマホのネイティブを使用） -->
+<div id="action-bar">
+  <button onclick="kDaku()">゛゜</button>
+  <button class="sp" onclick="kDel()">⌫ 消す</button>
+  <button onclick="kNext()">次 →</button>
+</div>
+
+<script>
+// =====================================================
+// 単語データベース
+// =====================================================
+const WORDS = [
+  // 花
+  { word: 'さくら',     hint: '春を代表する日本の花' },
+  { word: 'ひまわり',   hint: '夏に太陽を向く黄色い花' },
+  { word: 'すみれ',     hint: '紫色の小さな野の花' },
+  { word: 'たんぽぽ',   hint: '白い綿毛が飛ぶ黄色い花' },
+  { word: 'あさがお',   hint: '夏の朝に咲くラッパ形の花' },
+  { word: 'うめ',       hint: '春一番に咲く白やピンクの花' },
+  { word: 'きく',       hint: '秋を代表する和の花' },
+  { word: 'もも',       hint: '春にピンクの花が咲く果物の木' },
+  { word: 'なのはな',   hint: '春の田んぼに広がる黄色い花畑' },
+  { word: 'あじさい',   hint: '梅雨の時期に青や紫で咲く花' },
+  // 旅行
+  { word: 'りょかん',   hint: '日本式の宿泊施設' },
+  { word: 'おみやげ',   hint: '旅先で家族に買って帰るもの' },
+  { word: 'ひこうき',   hint: '空を飛ぶ乗り物' },
+  { word: 'おんせん',   hint: '地面から湧く熱いお湯。旅の楽しみ' },
+  { word: 'さんぽ',     hint: 'ゆっくり歩いて景色を楽しむこと' },
+  { word: 'みやこ',     hint: '都。昔の日本の首都のこと' },
+  { word: 'ふね',       hint: '海や川を走る乗り物' },
+  { word: 'かんこう',   hint: '名所や旧跡を見て回ること' },
+  { word: 'きっぷ',     hint: '電車やバスに乗るために買うもの' },
+  // 料理
+  { word: 'おにぎり',   hint: '海苔で包んだ三角のご飯' },
+  { word: 'みそしる',   hint: '大豆から作る日本の汁物' },
+  { word: 'てんぷら',   hint: '衣をつけて油で揚げた料理' },
+  { word: 'うどん',     hint: '太くて白い麺の日本料理' },
+  { word: 'そば',       hint: '細くて茶色い麺の日本料理' },
+  { word: 'たまご',     hint: '鶏が産む食材。黄身と白身がある' },
+  { word: 'やきとり',   hint: '串に刺して焼いた鶏肉料理' },
+  { word: 'おでん',     hint: '冬に食べる大根や卵の煮込み料理' },
+  { word: 'なっとう',   hint: 'ねばねばした大豆の発酵食品' },
+  { word: 'すし',       hint: '酢飯の上に魚をのせた料理' },
+  // 動物
+  { word: 'いぬ',       hint: 'ワンと鳴く人間の友達' },
+  { word: 'ねこ',       hint: 'ニャーと鳴くふわふわのペット' },
+  { word: 'うさぎ',     hint: '長い耳と短いしっぽを持つ動物' },
+  { word: 'きつね',     hint: '化けると言われる赤茶色の動物' },
+  { word: 'たぬき',     hint: '腹つづみを打つ丸い動物' },
+  { word: 'ぞう',       hint: '長い鼻を持つ大きな動物' },
+  { word: 'きりん',     hint: '首がとても長い動物' },
+  { word: 'くま',       hint: '冬眠する大きな動物' },
+  { word: 'さる',       hint: '木登りが得意な人に似た動物' },
+  { word: 'とら',       hint: '縞模様の大きなネコ科の動物' },
+  // 昭和
+  { word: 'ちゃぶだい', hint: '昭和の家庭にあった低くて丸いテーブル' },
+  { word: 'めんこ',     hint: '厚紙を地面に叩きつける昭和の遊び' },
+  { word: 'ふろしき',   hint: '何でも包める正方形の布' },
+  { word: 'せんとう',   hint: '近所のお風呂屋さん' },
+  { word: 'だがし',     hint: '昭和の子供が駄菓子屋で買った安いお菓子' },
+  { word: 'みずあめ',   hint: '透明でねばねばした昔ながらの甘いもの' },
+  { word: 'べんとう',   hint: '運動会や遠足に持って行くお昼ごはん' },
+  { word: 'おはじき',   hint: '色ガラスを指ではじく昭和の遊び道具' },
+  { word: 'こうえん',   hint: '子供たちが遊んだ近所の広場' },
+  { word: 'さんりんしゃ', hint: '子供が最初に乗る三つ輪の乗り物' },
+];
+
+// =====================================================
+// クロスワード生成
+// =====================================================
+const GR = 13; // grid rows
+const GC = 13; // grid cols
+
+function mkEmptyGrid() {
+  return Array.from({ length: GR }, () => Array(GC).fill(null));
+}
+
+function canPlace(grid, chars, row, col, dir) {
+  const len = chars.length;
+
+  // 範囲チェック
+  if (dir === 'H') {
+    if (row < 0 || row >= GR) return false;
+    if (col < 0 || col + len > GC) return false;
+    // 単語の前後が空きかどうか
+    if (col > 0 && grid[row][col - 1] !== null) return false;
+    if (col + len < GC && grid[row][col + len] !== null) return false;
+  } else {
+    if (col < 0 || col >= GC) return false;
+    if (row < 0 || row + len > GR) return false;
+    if (row > 0 && grid[row - 1][col] !== null) return false;
+    if (row + len < GR && grid[row + len][col] !== null) return false;
+  }
+
+  // 各マスのチェック
+  for (let i = 0; i < len; i++) {
+    const r = dir === 'H' ? row : row + i;
+    const c = dir === 'H' ? col + i : col;
+    const cell = grid[r][c];
+
+    if (cell !== null) {
+      // すでに文字がある → 同じ文字でないとNG（交差点）
+      if (cell !== chars[i]) return false;
+    } else {
+      // 空きマス → 垂直方向の隣が空きでないとNG（余計な単語を作らないため）
+      if (dir === 'H') {
+        if (r > 0 && grid[r - 1][c] !== null) return false;
+        if (r < GR - 1 && grid[r + 1][c] !== null) return false;
+      } else {
+        if (c > 0 && grid[r][c - 1] !== null) return false;
+        if (c < GC - 1 && grid[r][c + 1] !== null) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function placeOnGrid(grid, chars, row, col, dir) {
+  for (let i = 0; i < chars.length; i++) {
+    const r = dir === 'H' ? row : row + i;
+    const c = dir === 'H' ? col + i : col;
+    grid[r][c] = chars[i];
+  }
+}
+
+function rnd(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateCrossword(pool) {
+  // 長い単語を優先、シャッフル
+  const sorted = rnd(pool).sort((a, b) => b.word.length - a.word.length);
+  let best = null;
+
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const grid = mkEmptyGrid();
+    const placed = []; // { word, hint, row, col, dir }
+    const wlist = rnd(sorted).sort((a, b) => b.word.length - a.word.length);
+
+    for (const wo of wlist) {
+      const chars = [...wo.word];
+
+      if (placed.length === 0) {
+        // 最初の単語：中央に横置き
+        const row = Math.floor(GR / 2);
+        const col = Math.floor((GC - chars.length) / 2);
+        placeOnGrid(grid, chars, row, col, 'H');
+        placed.push({ word: wo.word, hint: wo.hint, row, col, dir: 'H' });
+        continue;
+      }
+
+      // 既存の単語と交差できる候補を探す
+      const candidates = [];
+      for (const p of placed) {
+        const pChars = [...p.word];
+        const newDir = p.dir === 'H' ? 'V' : 'H';
+
+        for (let pi = 0; pi < pChars.length; pi++) {
+          for (let ci = 0; ci < chars.length; ci++) {
+            if (pChars[pi] !== chars[ci]) continue;
+
+            let row, col;
+            if (p.dir === 'H') {
+              // 既存が横 → 新しいのは縦
+              row = p.row - ci;
+              col = p.col + pi;
+            } else {
+              // 既存が縦 → 新しいのは横
+              row = p.row + pi;
+              col = p.col - ci;
+            }
+
+            if (!canPlace(grid, chars, row, col, newDir)) continue;
+
+            // 交差数をスコアとして計算
+            let score = 0;
+            for (let i = 0; i < chars.length; i++) {
+              const r = newDir === 'H' ? row : row + i;
+              const c = newDir === 'H' ? col + i : col;
+              if (grid[r][c] === chars[i]) score++;
+            }
+            candidates.push({ row, col, dir: newDir, score });
+          }
+        }
+      }
+
+      if (candidates.length === 0) continue;
+
+      // 最良の候補を選ぶ（交差数が多いほど良い）
+      candidates.sort((a, b) => b.score - a.score || Math.random() - 0.5);
+      const { row, col, dir } = candidates[0];
+      placeOnGrid(grid, chars, row, col, dir);
+      placed.push({ word: wo.word, hint: wo.hint, row, col, dir });
+    }
+
+    if (!best || placed.length > best.placed.length) {
+      best = { grid: grid.map(r => [...r]), placed: [...placed] };
+    }
+    if (placed.length >= 8) break;
+  }
+
+  // グリッドを余白なくトリム
+  const g = best.grid;
+  let minR = GR, maxR = 0, minC = GC, maxC = 0;
+  for (let r = 0; r < GR; r++) {
+    for (let c = 0; c < GC; c++) {
+      if (g[r][c] !== null) {
+        minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+        minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+      }
+    }
+  }
+
+  const trimH = maxR - minR + 1;
+  const trimW = maxC - minC + 1;
+  const trimGrid = Array.from({ length: trimH }, (_, r) =>
+    Array.from({ length: trimW }, (_, c) => g[r + minR][c + minC])
+  );
+  const trimPlaced = best.placed.map(p => ({
+    ...p,
+    row: p.row - minR,
+    col: p.col - minC,
+  }));
+
+  return { grid: trimGrid, placed: trimPlaced };
+}
+
+function assignNumbers(grid, placed) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const numGrid = Array.from({ length: rows }, () => Array(cols).fill(0));
+  let n = 1;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] === null) continue;
+      const startsH = (c === 0 || grid[r][c - 1] === null) && c + 1 < cols && grid[r][c + 1] !== null;
+      const startsV = (r === 0 || grid[r - 1][c] === null) && r + 1 < rows && grid[r + 1][c] !== null;
+      if (startsH || startsV) numGrid[r][c] = n++;
+    }
+  }
+
+  const numberedWords = placed.map(p => ({ ...p, number: numGrid[p.row][p.col] }));
+  return { numGrid, numberedWords };
+}
+
+// =====================================================
+// ゲーム状態
+// =====================================================
+const G = {
+  grid: [],
+  numGrid: [],
+  words: [],
+  input: [],
+  selRow: -1,
+  selCol: -1,
+  selDir: 'H',
+  selIdx: -1,
+  hints: 0,
+};
+
+// =====================================================
+// ゲーム操作
+// =====================================================
+function newGame() {
+  document.getElementById('done').classList.remove('show');
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('grid').style.display = 'none';
+
+  setTimeout(() => {
+    try {
+      const pool = rnd(WORDS).slice(0, 20);
+      const { grid, placed } = generateCrossword(pool);
+      const { numGrid, numberedWords } = assignNumbers(grid, placed);
+
+      G.grid = grid;
+      G.numGrid = numGrid;
+      G.words = numberedWords;
+      G.input = grid.map(row => row.map(() => ''));
+      G.selRow = -1; G.selCol = -1; G.selDir = 'H'; G.selIdx = -1;
+      G.hints = 0;
+
+      // マスのサイズをグリッド幅に合わせる
+      const gw = grid[0].length;
+      const cs = Math.min(36, Math.floor((Math.min(window.innerWidth, 480) - 20) / gw));
+      document.documentElement.style.setProperty('--cs', cs + 'px');
+
+      // 最初の横カギを選択
+      const first = numberedWords.find(w => w.dir === 'H') || numberedWords[0];
+      if (first) selectWord(first);
+
+      renderAll();
+      save();
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('grid').style.display = '';
+    } catch (err) {
+      document.getElementById('loading').textContent = 'エラーが発生しました。ページを再読み込みしてください。';
+      console.error(err);
+    }
+  }, 50);
+}
+
+function selectWord(w) {
+  G.selDir = w.dir;
+  G.selRow = w.row;
+  G.selCol = w.col;
+  G.selIdx = G.words.indexOf(w);
+}
+
+function curWord() {
+  return G.words[G.selIdx] || null;
+}
+
+function wordAt(row, col, dir) {
+  return G.words.find(w => {
+    if (w.dir !== dir) return false;
+    if (dir === 'H') return w.row === row && col >= w.col && col < w.col + w.word.length;
+    return w.col === col && row >= w.row && row < w.row + w.word.length;
+  }) || null;
+}
+
+function wordCells(w) {
+  return Array.from({ length: w.word.length }, (_, i) => ({
+    row: w.dir === 'H' ? w.row : w.row + i,
+    col: w.dir === 'H' ? w.col + i : w.col,
+  }));
+}
+
+// セルタップ
+function cellClick(row, col) {
+  if (G.grid[row][col] === null) return;
+
+  if (G.selRow === row && G.selCol === col) {
+    // 同じセルをタップ → 方向切り替え
+    const newDir = G.selDir === 'H' ? 'V' : 'H';
+    const w = wordAt(row, col, newDir);
+    if (w) { G.selDir = newDir; G.selIdx = G.words.indexOf(w); }
+  } else {
+    let w = wordAt(row, col, G.selDir);
+    if (!w) {
+      const alt = G.selDir === 'H' ? 'V' : 'H';
+      w = wordAt(row, col, alt);
+      if (w) G.selDir = alt;
+    }
+    if (w) {
+      G.selRow = row; G.selCol = col;
+      G.selIdx = G.words.indexOf(w);
+    }
+  }
+  renderAll();
+  focusInput();
+}
+
+// カギ一覧をタップ
+function clueClick(idx) {
+  const w = G.words[idx];
+  G.selDir = w.dir;
+  G.selRow = w.row;
+  G.selCol = w.col;
+  G.selIdx = idx;
+  renderAll();
+  focusInput();
+}
+
+// キーボード入力
+function kInput(ch) {
+  if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
+  G.input[G.selRow][G.selCol] = ch;
+  advance();
+  renderAll();
+  checkDone();
+  save();
+}
+
+function advance() {
+  const w = curWord();
+  if (!w) return;
+  const cells = wordCells(w);
+  const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+  if (idx >= 0 && idx < cells.length - 1) {
+    G.selRow = cells[idx + 1].row;
+    G.selCol = cells[idx + 1].col;
+  }
+}
+
+function retreat() {
+  const w = curWord();
+  if (!w) return;
+  const cells = wordCells(w);
+  const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+  if (idx > 0) {
+    G.selRow = cells[idx - 1].row;
+    G.selCol = cells[idx - 1].col;
+  }
+}
+
+function kDel() {
+  if (G.selRow < 0) return;
+  if (G.input[G.selRow][G.selCol]) {
+    G.input[G.selRow][G.selCol] = '';
+  } else {
+    retreat();
+    G.input[G.selRow][G.selCol] = '';
+  }
+  renderAll();
+  save();
+}
+
+function kNext() {
+  const w = curWord();
+  if (!w) return;
+  const cells = wordCells(w);
+  const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+  if (idx >= 0 && idx < cells.length - 1) {
+    G.selRow = cells[idx + 1].row;
+    G.selCol = cells[idx + 1].col;
+  } else {
+    const ni = (G.selIdx + 1) % G.words.length;
+    const nw = G.words[ni];
+    G.selIdx = ni; G.selDir = nw.dir;
+    G.selRow = nw.row; G.selCol = nw.col;
+  }
+  renderAll();
+}
+
+const DAKU = {
+  'か':'が','き':'ぎ','く':'ぐ','け':'げ','こ':'ご',
+  'さ':'ざ','し':'じ','す':'ず','せ':'ぜ','そ':'ぞ',
+  'た':'だ','ち':'ぢ','つ':'づ','て':'で','と':'ど',
+  'は':'ば','ひ':'び','ふ':'ぶ','へ':'べ','ほ':'ぼ',
+  'が':'か','ぎ':'き','ぐ':'く','げ':'け','ご':'こ',
+  'ざ':'さ','じ':'し','ず':'す','ぜ':'せ','ぞ':'そ',
+  'だ':'た','ぢ':'ち','づ':'つ','で':'て','ど':'と',
+  'ば':'ぱ','び':'ぴ','ぶ':'ぷ','べ':'ぺ','ぼ':'ぽ',
+  'ぱ':'は','ぴ':'ひ','ぷ':'ふ','ぺ':'へ','ぽ':'ほ',
+};
+
+function kDaku() {
+  if (G.selRow < 0) return;
+  const ch = G.input[G.selRow][G.selCol];
+  if (ch && DAKU[ch]) {
+    G.input[G.selRow][G.selCol] = DAKU[ch];
+    renderAll();
+    save();
+  }
+}
+
+function useHint() {
+  if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
+  G.input[G.selRow][G.selCol] = G.grid[G.selRow][G.selCol];
+  G.hints++;
+  advance();
+  renderAll();
+  checkDone();
+  save();
+}
+
+// =====================================================
+// 描画
+// =====================================================
+function renderAll() {
+  renderGrid();
+  renderClueDisplay();
+  renderCluesList();
+}
+
+function renderGrid() {
+  const tbl = document.getElementById('grid');
+  const rows = G.grid.length;
+  const cols = G.grid[0].length;
+  const cw = curWord();
+  const wordSet = new Set();
+  if (cw) wordCells(cw).forEach(c => wordSet.add(c.row + ',' + c.col));
+
+  let html = '';
+  for (let r = 0; r < rows; r++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const letter = G.grid[r][c];
+      if (letter === null) {
+        html += '<td class="black"></td>';
+        continue;
+      }
+
+      const isSel  = G.selRow === r && G.selCol === c;
+      const isWord = wordSet.has(r + ',' + c);
+      const cls    = isSel ? 'cell-hl' : isWord ? 'word-hl' : '';
+      const num    = G.numGrid[r][c];
+      const uch    = G.input[r][c];
+
+      const numHtml = num ? `<span class="num">${num}</span>` : '';
+      const letHtml = uch
+        ? `<span class="letter${uch !== letter ? ' wrong' : ''}">${uch}</span>`
+        : '';
+
+      html += `<td${cls ? ` class="${cls}"` : ''} onclick="cellClick(${r},${c})">${numHtml}${letHtml}</td>`;
+    }
+    html += '</tr>';
+  }
+  tbl.innerHTML = html;
+}
+
+function renderClueDisplay() {
+  const el = document.getElementById('clue-display');
+  const w = curWord();
+  if (!w) {
+    el.innerHTML = 'マスをタップして選んでください';
+    return;
+  }
+  const arrow = w.dir === 'H' ? '→' : '↓';
+  el.innerHTML = `<span class="clue-label">${w.number}${arrow}</span>${w.hint}`;
+}
+
+function renderCluesList() {
+  const cw = curWord();
+
+  const across = G.words.filter(w => w.dir === 'H').sort((a, b) => a.number - b.number);
+  const down   = G.words.filter(w => w.dir === 'V').sort((a, b) => a.number - b.number);
+
+  const mkHtml = list => list.map(w => {
+    const idx = G.words.indexOf(w);
+    const act = w === cw ? ' active' : '';
+    return `<div class="clue-item${act}" onclick="clueClick(${idx})"><span class="clue-num">${w.number}</span><span class="clue-text">${w.hint}</span></div>`;
+  }).join('');
+
+  document.getElementById('across-list').innerHTML = mkHtml(across);
+  document.getElementById('down-list').innerHTML   = mkHtml(down);
+
+  const active = document.querySelector('.clue-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// =====================================================
+// 完成チェック
+// =====================================================
+function checkDone() {
+  for (let r = 0; r < G.grid.length; r++) {
+    for (let c = 0; c < G.grid[0].length; c++) {
+      if (G.grid[r][c] !== null && G.input[r][c] !== G.grid[r][c]) return;
+    }
+  }
+  const msg = G.hints === 0
+    ? 'ヒントなしで全部正解！すごい！'
+    : `ヒントを${G.hints}回使って完成！`;
+  document.getElementById('done-sub').textContent = msg;
+  setTimeout(() => document.getElementById('done').classList.add('show'), 500);
+}
+
+// =====================================================
+// セーブ／ロード
+// =====================================================
+function save() {
+  try {
+    localStorage.setItem('cw_v4', JSON.stringify({
+      grid: G.grid, numGrid: G.numGrid, words: G.words,
+      input: G.input, selRow: G.selRow, selCol: G.selCol,
+      selDir: G.selDir, selIdx: G.selIdx, hints: G.hints,
+      cs: getComputedStyle(document.documentElement).getPropertyValue('--cs').trim(),
+    }));
+  } catch (e) {}
+}
+
+function loadSave() {
+  try {
+    const d = JSON.parse(localStorage.getItem('cw_v4') || 'null');
+    if (!d || !d.grid || !d.grid.length) return false;
+    G.grid    = d.grid;
+    G.numGrid = d.numGrid;
+    G.words   = d.words;
+    G.input   = d.input;
+    G.selRow  = d.selRow;
+    G.selCol  = d.selCol;
+    G.selDir  = d.selDir;
+    G.selIdx  = d.selIdx;
+    G.hints   = d.hints;
+    if (d.cs) document.documentElement.style.setProperty('--cs', d.cs);
+    return true;
+  } catch (e) { return false; }
+}
+
+// =====================================================
+// スマホキーボード（隠しinput）
+// =====================================================
+const hiddenInput = document.createElement('input');
+hiddenInput.type = 'text';
+hiddenInput.autocomplete = 'off';
+hiddenInput.autocorrect = 'off';
+hiddenInput.autocapitalize = 'off';
+hiddenInput.spellcheck = false;
+hiddenInput.style.cssText = 'position:fixed;left:-999px;top:50%;width:1px;height:1px;opacity:0;font-size:16px;';
+document.body.appendChild(hiddenInput);
+
+let composing = false;
+
+hiddenInput.addEventListener('compositionstart', () => {
+  composing = true;
+});
+
+hiddenInput.addEventListener('compositionend', (e) => {
+  composing = false;
+  const text = e.data || hiddenInput.value;
+  hiddenInput.value = '';
+  if (text) {
+    [...text].forEach(ch => enterChar(ch));
+    renderAll();
+    checkDone();
+    save();
+  }
+});
+
+hiddenInput.addEventListener('input', () => {
+  if (composing) return;
+  const val = hiddenInput.value;
+  hiddenInput.value = '';
+  if (val) {
+    [...val].forEach(ch => enterChar(ch));
+    renderAll();
+    checkDone();
+    save();
+  }
+});
+
+hiddenInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Backspace' && !composing) {
+    e.preventDefault();
+    kDel();
+  }
+});
+
+// カタカナ→ひらがな変換
+function toHira(ch) {
+  return ch.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+}
+
+function enterChar(ch) {
+  if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
+  const hira = toHira(ch);
+  if ([...hira].length === 1 && hira.match(/[\u3041-\u3096]/)) {
+    G.input[G.selRow][G.selCol] = hira;
+    advance();
+  }
+}
+
+function focusInput() {
+  hiddenInput.value = '';
+  hiddenInput.focus();
+}
+
+// =====================================================
+// 起動
+// =====================================================
+window.addEventListener('load', () => {
+  if (loadSave() && G.grid.length > 0) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('grid').style.display = '';
+    renderAll();
+  } else {
+    newGame();
+  }
+});
+</script>
+</body>
+</html>
