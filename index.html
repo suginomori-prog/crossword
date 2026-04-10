@@ -8,13 +8,24 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root { --cs: 36px; }
 
-body {
+html, body {
   font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
   background: #fef9f0;
-  min-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
-  overflow-x: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 header {
@@ -52,7 +63,8 @@ header {
   display: flex;
   justify-content: center;
   padding: 8px 8px 4px;
-  overflow-x: auto;
+  overflow: auto;
+  flex-shrink: 0;
 }
 
 #loading {
@@ -133,7 +145,8 @@ table#grid td.cell-hl { background: #4da8e8; }
   grid-template-columns: 1fr 1fr;
   gap: 0 8px;
   padding: 4px 8px 6px;
-  max-height: 110px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -160,14 +173,13 @@ table#grid td.cell-hl { background: #4da8e8; }
 
 /* ---- ACTION BAR ---- */
 #action-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
   background: #c8ccd8;
   padding: 6px 8px 10px;
   border-top: 2px solid #9aa;
   display: flex;
   justify-content: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 #action-bar button {
   background: white;
@@ -183,9 +195,6 @@ table#grid td.cell-hl { background: #4da8e8; }
 }
 #action-bar button:active { transform: translateY(2px); box-shadow: none; }
 #action-bar button.sp { background: #a8aab8; }
-
-/* ---- SPACER for action bar ---- */
-#kb-spacer { height: 70px; }
 
 /* ---- DONE OVERLAY ---- */
 #done {
@@ -220,6 +229,7 @@ table#grid td.cell-hl { background: #4da8e8; }
 </style>
 </head>
 <body>
+<div id="app">
 
 <header>🌸 クロスワードパズル</header>
 
@@ -246,7 +256,14 @@ table#grid td.cell-hl { background: #4da8e8; }
   </div>
 </div>
 
-<div id="kb-spacer"></div>
+<!-- 操作バー -->
+<div id="action-bar">
+  <button onclick="kDaku()">゛゜</button>
+  <button class="sp" onclick="kDel()">⌫ 消す</button>
+  <button onclick="kNext()">次 →</button>
+</div>
+
+</div><!-- /app -->
 
 <div id="done">
   <div class="done-box">
@@ -255,13 +272,6 @@ table#grid td.cell-hl { background: #4da8e8; }
     <div class="done-sub" id="done-sub">全部正解！</div>
     <button class="done-btn" onclick="newGame()">もう一度あそぶ</button>
   </div>
-</div>
-
-<!-- 操作バー（キーボードはスマホのネイティブを使用） -->
-<div id="action-bar">
-  <button onclick="kDaku()">゛゜</button>
-  <button class="sp" onclick="kDel()">⌫ 消す</button>
-  <button onclick="kNext()">次 →</button>
 </div>
 
 <script>
@@ -925,6 +935,13 @@ function focusInput() {
   }
   hiddenInput.focus({ preventScroll: true });
 }
+
+// ページ全体のスクロールを完全に防止
+document.addEventListener('touchmove', (e) => {
+  // カギ一覧のスクロールだけ許可
+  if (e.target.closest('#clues-panel')) return;
+  e.preventDefault();
+}, { passive: false });
 
 // =====================================================
 // 起動
