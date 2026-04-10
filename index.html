@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>クロスワードパズル</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,7 +64,8 @@ header {
   justify-content: center;
   padding: 8px 8px 4px;
   overflow: auto;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 #loading {
@@ -139,42 +140,12 @@ table#grid td.cell-hl { background: #4da8e8; }
   margin-right: 4px;
 }
 
-/* ---- CLUES LIST ---- */
-#clues-panel {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 8px;
-  padding: 4px 8px 6px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: #888;
-  margin-bottom: 2px;
-}
-
-.clue-item {
-  font-size: 15px;
-  padding: 4px 4px;
-  cursor: pointer;
-  border-radius: 3px;
-  display: flex;
-  gap: 4px;
-  align-items: flex-start;
-  border-bottom: 1px solid #eee;
-}
-.clue-item.active { background: #b8d8f8; }
-.clue-num { font-weight: bold; color: #c0704a; min-width: 18px; flex-shrink: 0; }
-.clue-text { color: #333; }
 
 /* ---- HIRAGANA KEYBOARD ---- */
 #kana-kb {
   background: #c8ccd8;
   padding: 6px 4px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   border-top: 2px solid #9aa;
   flex-shrink: 0;
 }
@@ -262,16 +233,6 @@ table#grid td.cell-hl { background: #4da8e8; }
 
 <div id="clue-display">マスをタップして選んでください</div>
 
-<div id="clues-panel">
-  <div>
-    <div class="section-title">→ 横のカギ</div>
-    <div id="across-list"></div>
-  </div>
-  <div>
-    <div class="section-title">↓ 縦のカギ</div>
-    <div id="down-list"></div>
-  </div>
-</div>
 
 <!-- ひらがなキーボード（2段式） -->
 <div id="kana-kb">
@@ -835,7 +796,22 @@ function kInput(ch) {
 
 function advance() {
   const w = curWord();
-  if (!w) return;
+  if (!w) {
+    // 現在の方向の単語が見つからない場合、もう一方の方向を試す
+    const altDir = G.selDir === 'H' ? 'V' : 'H';
+    const altW = wordAt(G.selRow, G.selCol, altDir);
+    if (altW) {
+      const cells = wordCells(altW);
+      const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+      if (idx >= 0 && idx < cells.length - 1) {
+        G.selDir = altDir;
+        G.selIdx = G.words.indexOf(altW);
+        G.selRow = cells[idx + 1].row;
+        G.selCol = cells[idx + 1].col;
+      }
+    }
+    return;
+  }
   const cells = wordCells(w);
   const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
   if (idx >= 0 && idx < cells.length - 1) {
@@ -948,7 +924,6 @@ function useHint() {
 function renderAll() {
   renderGrid();
   renderClueDisplay();
-  renderCluesList();
 }
 
 function renderGrid() {
@@ -996,25 +971,6 @@ function renderClueDisplay() {
   }
   const arrow = w.dir === 'H' ? '→' : '↓';
   el.innerHTML = `<span class="clue-label">${w.number}${arrow}</span>${w.hint}`;
-}
-
-function renderCluesList() {
-  const cw = curWord();
-
-  const across = G.words.filter(w => w.dir === 'H').sort((a, b) => a.number - b.number);
-  const down   = G.words.filter(w => w.dir === 'V').sort((a, b) => a.number - b.number);
-
-  const mkHtml = list => list.map(w => {
-    const idx = G.words.indexOf(w);
-    const act = w === cw ? ' active' : '';
-    return `<div class="clue-item${act}" onclick="clueClick(${idx})"><span class="clue-num">${w.number}</span><span class="clue-text">${w.hint}</span></div>`;
-  }).join('');
-
-  document.getElementById('across-list').innerHTML = mkHtml(across);
-  document.getElementById('down-list').innerHTML   = mkHtml(down);
-
-  const active = document.querySelector('.clue-item.active');
-  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 // =====================================================
