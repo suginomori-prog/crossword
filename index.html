@@ -614,7 +614,9 @@ function cellClick(row, col) {
     }
   }
   renderAll();
+  const sx = window.scrollX, sy = window.scrollY;
   focusInput();
+  window.scrollTo(sx, sy);
 }
 
 // カギ一覧をタップ
@@ -625,7 +627,9 @@ function clueClick(idx) {
   G.selCol = w.col;
   G.selIdx = idx;
   renderAll();
+  const sx = window.scrollX, sy = window.scrollY;
   focusInput();
+  window.scrollTo(sx, sy);
 }
 
 // キーボード入力
@@ -918,6 +922,13 @@ function enterChar(ch) {
 function focusInput() {
   hiddenInput.value = '';
   hiddenInput.focus({ preventScroll: true });
+}
+
+// キーボード表示時の遅延スクロールを抑制
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('scroll', () => {
+    window.scrollTo(0, 0);
+  });
 }
 
 // =====================================================
