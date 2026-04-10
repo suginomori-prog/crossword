@@ -875,14 +875,22 @@ hiddenInput.addEventListener('compositionend', (e) => {
 });
 
 hiddenInput.addEventListener('input', () => {
-  if (composing) return;
   const val = hiddenInput.value;
-  hiddenInput.value = '';
-  if (val) {
-    [...val].forEach(ch => enterChar(ch));
+  if (!val) return;
+  // 変換中でも確定済みのかな文字があれば即反映
+  const kana = [...val].filter(ch => {
+    const h = toHira(ch);
+    return h.match(/[\u3041-\u3096]/);
+  });
+  if (kana.length > 0) {
+    hiddenInput.value = '';
+    composing = false;
+    kana.forEach(ch => enterChar(ch));
     renderAll();
     checkDone();
     save();
+  } else if (!composing) {
+    hiddenInput.value = '';
   }
 });
 
