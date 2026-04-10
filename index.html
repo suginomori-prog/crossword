@@ -1089,9 +1089,16 @@ function kbRow(idx) {
   });
 }
 
+function canModify(ch) {
+  return !!(DAKU[ch] || KOMOJI[ch]);
+}
+
 function kType(ch) {
   if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
   G.input[G.selRow][G.selCol] = ch;
+  if (!canModify(ch)) {
+    advance();
+  }
   renderAll();
   checkDone();
   save();
