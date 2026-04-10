@@ -917,24 +917,7 @@ function enterChar(ch) {
 
 function focusInput() {
   hiddenInput.value = '';
-  hiddenInput.focus();
-  // キーボード表示後に選択セルが見えるようスクロール調整
-  setTimeout(() => {
-    const cell = document.querySelector('td.cell-hl');
-    if (cell) {
-      cell.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }, 350);
-}
-
-// キーボード開閉時にセルが見えるよう調整
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    const cell = document.querySelector('td.cell-hl');
-    if (cell) {
-      setTimeout(() => cell.scrollIntoView({ block: 'center', behavior: 'smooth' }), 100);
-    }
-  });
+  hiddenInput.focus({ preventScroll: true });
 }
 
 // =====================================================
