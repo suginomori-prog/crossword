@@ -876,8 +876,12 @@ function kDaku() {
   if (G.selRow < 0) return;
   const ch = G.input[G.selRow][G.selCol];
   if (ch && DAKU[ch]) {
-    G.input[G.selRow][G.selCol] = DAKU[ch];
-    advance();
+    const newCh = DAKU[ch];
+    G.input[G.selRow][G.selCol] = newCh;
+    // 正解の時だけ次のセルへ
+    if (newCh === G.grid[G.selRow][G.selCol]) {
+      advance();
+    }
     renderAll();
     checkDone();
     save();
@@ -895,8 +899,12 @@ function kKo() {
   if (G.selRow < 0) return;
   const ch = G.input[G.selRow][G.selCol];
   if (ch && KOMOJI[ch]) {
-    G.input[G.selRow][G.selCol] = KOMOJI[ch];
-    advance();
+    const newCh = KOMOJI[ch];
+    G.input[G.selRow][G.selCol] = newCh;
+    // 正解の時だけ次のセルへ
+    if (newCh === G.grid[G.selRow][G.selCol]) {
+      advance();
+    }
     renderAll();
     checkDone();
     save();
@@ -1040,14 +1048,11 @@ function kbRow(idx) {
   });
 }
 
-function canModify(ch) {
-  return !!(DAKU[ch] || KOMOJI[ch]);
-}
-
 function kType(ch) {
   if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
   G.input[G.selRow][G.selCol] = ch;
-  if (!canModify(ch)) {
+  // 正解の時だけ次のセルへ
+  if (ch === G.grid[G.selRow][G.selCol]) {
     advance();
   }
   renderAll();
