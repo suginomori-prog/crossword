@@ -174,35 +174,43 @@ table#grid td.cell-hl { background: #4da8e8; }
 /* ---- HIRAGANA KEYBOARD ---- */
 #kana-kb {
   background: #c8ccd8;
-  padding: 4px;
+  padding: 6px 4px;
   border-top: 2px solid #9aa;
   flex-shrink: 0;
 }
 #kana-kb .kb-row {
   display: flex;
   justify-content: center;
-  gap: 3px;
-  margin-bottom: 3px;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 #kana-kb .kb-row:last-child { margin-bottom: 0; }
 #kana-kb button {
   background: white;
   border: 1px solid #bbb;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 20px;
   font-family: inherit;
   font-weight: bold;
-  min-width: 32px;
-  height: 36px;
+  flex: 1;
+  max-width: 64px;
+  height: 44px;
   cursor: pointer;
   touch-action: manipulation;
-  padding: 0 2px;
+  padding: 0;
 }
 #kana-kb button:active { background: #d0d0d0; }
 #kana-kb button.fn-btn {
   background: #a8aab8;
-  font-size: 13px;
-  min-width: 48px;
+  font-size: 15px;
+}
+#kana-kb button.row-btn {
+  background: #e8ddd4;
+  border-color: #c0704a;
+}
+#kana-kb button.row-btn.active {
+  background: #c0704a;
+  color: white;
 }
 
 /* ---- DONE OVERLAY ---- */
@@ -265,27 +273,25 @@ table#grid td.cell-hl { background: #4da8e8; }
   </div>
 </div>
 
-<!-- ひらがなキーボード -->
+<!-- ひらがなキーボード（2段式） -->
 <div id="kana-kb">
-  <div class="kb-row">
+  <div class="kb-row" id="kb-chars">
     <button onclick="kType('あ')">あ</button><button onclick="kType('い')">い</button><button onclick="kType('う')">う</button><button onclick="kType('え')">え</button><button onclick="kType('お')">お</button>
-    <button onclick="kType('な')">な</button><button onclick="kType('に')">に</button><button onclick="kType('ぬ')">ぬ</button><button onclick="kType('ね')">ね</button><button onclick="kType('の')">の</button>
+  </div>
+  <div class="kb-row" id="kb-rows">
+    <button class="row-btn active" onclick="kbRow(0)">あ</button>
+    <button class="row-btn" onclick="kbRow(1)">か</button>
+    <button class="row-btn" onclick="kbRow(2)">さ</button>
+    <button class="row-btn" onclick="kbRow(3)">た</button>
+    <button class="row-btn" onclick="kbRow(4)">な</button>
+    <button class="row-btn" onclick="kbRow(5)">は</button>
+    <button class="row-btn" onclick="kbRow(6)">ま</button>
+    <button class="row-btn" onclick="kbRow(7)">やらわ</button>
   </div>
   <div class="kb-row">
-    <button onclick="kType('か')">か</button><button onclick="kType('き')">き</button><button onclick="kType('く')">く</button><button onclick="kType('け')">け</button><button onclick="kType('こ')">こ</button>
-    <button onclick="kType('は')">は</button><button onclick="kType('ひ')">ひ</button><button onclick="kType('ふ')">ふ</button><button onclick="kType('へ')">へ</button><button onclick="kType('ほ')">ほ</button>
-  </div>
-  <div class="kb-row">
-    <button onclick="kType('さ')">さ</button><button onclick="kType('し')">し</button><button onclick="kType('す')">す</button><button onclick="kType('せ')">せ</button><button onclick="kType('そ')">そ</button>
-    <button onclick="kType('ま')">ま</button><button onclick="kType('み')">み</button><button onclick="kType('む')">む</button><button onclick="kType('め')">め</button><button onclick="kType('も')">も</button>
-  </div>
-  <div class="kb-row">
-    <button onclick="kType('た')">た</button><button onclick="kType('ち')">ち</button><button onclick="kType('つ')">つ</button><button onclick="kType('て')">て</button><button onclick="kType('と')">と</button>
-    <button onclick="kType('や')">や</button><button onclick="kType('ゆ')">ゆ</button><button onclick="kType('よ')">よ</button><button onclick="kType('ら')">ら</button><button onclick="kType('り')">り</button>
-  </div>
-  <div class="kb-row">
-    <button onclick="kType('る')">る</button><button onclick="kType('れ')">れ</button><button onclick="kType('ろ')">ろ</button><button onclick="kType('わ')">わ</button><button onclick="kType('を')">を</button><button onclick="kType('ん')">ん</button>
-    <button class="fn-btn" onclick="kDaku()">゛゜</button><button class="fn-btn" onclick="kDel()">⌫</button><button class="fn-btn" onclick="kNext()">次→</button>
+    <button class="fn-btn" onclick="kDaku()">゛゜</button>
+    <button class="fn-btn" onclick="kDel()">⌫ 消す</button>
+    <button class="fn-btn" onclick="kNext()">次 →</button>
   </div>
 </div>
 
@@ -881,6 +887,27 @@ function loadSave() {
 // =====================================================
 // ひらがなキーボード入力
 // =====================================================
+const KANA_ROWS = [
+  ['あ','い','う','え','お'],
+  ['か','き','く','け','こ'],
+  ['さ','し','す','せ','そ'],
+  ['た','ち','つ','て','と'],
+  ['な','に','ぬ','ね','の'],
+  ['は','ひ','ふ','へ','ほ'],
+  ['ま','み','む','め','も'],
+  ['や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'],
+];
+
+function kbRow(idx) {
+  const chars = KANA_ROWS[idx];
+  const el = document.getElementById('kb-chars');
+  el.innerHTML = chars.map(c => `<button onclick="kType('${c}')">${c}</button>`).join('');
+  // 行ボタンのハイライト更新
+  document.querySelectorAll('#kb-rows .row-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
 function kType(ch) {
   if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
   G.input[G.selRow][G.selCol] = ch;
