@@ -614,9 +614,7 @@ function cellClick(row, col) {
     }
   }
   renderAll();
-  const sx = window.scrollX, sy = window.scrollY;
   focusInput();
-  window.scrollTo(sx, sy);
 }
 
 // カギ一覧をタップ
@@ -627,9 +625,7 @@ function clueClick(idx) {
   G.selCol = w.col;
   G.selIdx = idx;
   renderAll();
-  const sx = window.scrollX, sy = window.scrollY;
   focusInput();
-  window.scrollTo(sx, sy);
 }
 
 // キーボード入力
@@ -857,7 +853,7 @@ hiddenInput.autocomplete = 'off';
 hiddenInput.autocorrect = 'off';
 hiddenInput.autocapitalize = 'off';
 hiddenInput.spellcheck = false;
-hiddenInput.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;font-size:16px;pointer-events:none;';
+hiddenInput.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;font-size:16px;pointer-events:none;z-index:-1;';
 document.body.appendChild(hiddenInput);
 
 let composing = false;
@@ -921,14 +917,13 @@ function enterChar(ch) {
 
 function focusInput() {
   hiddenInput.value = '';
+  // 隠しinputを選択セルの中に配置（ブラウザがスクロールしてもセル位置に留まる）
+  const cell = document.querySelector('td.cell-hl');
+  if (cell) {
+    cell.style.position = 'relative';
+    cell.appendChild(hiddenInput);
+  }
   hiddenInput.focus({ preventScroll: true });
-}
-
-// キーボード表示時の遅延スクロールを抑制
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('scroll', () => {
-    window.scrollTo(0, 0);
-  });
 }
 
 // =====================================================
