@@ -911,7 +911,6 @@ function kbRow(idx) {
 function kType(ch) {
   if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
   G.input[G.selRow][G.selCol] = ch;
-  advance();
   renderAll();
   checkDone();
   save();
