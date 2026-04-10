@@ -796,27 +796,27 @@ function kInput(ch) {
 
 function advance() {
   const w = curWord();
-  if (!w) {
-    // 現在の方向の単語が見つからない場合、もう一方の方向を試す
-    const altDir = G.selDir === 'H' ? 'V' : 'H';
-    const altW = wordAt(G.selRow, G.selCol, altDir);
-    if (altW) {
-      const cells = wordCells(altW);
-      const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
-      if (idx >= 0 && idx < cells.length - 1) {
-        G.selDir = altDir;
-        G.selIdx = G.words.indexOf(altW);
-        G.selRow = cells[idx + 1].row;
-        G.selCol = cells[idx + 1].col;
-      }
+  if (w) {
+    const cells = wordCells(w);
+    const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+    if (idx >= 0 && idx < cells.length - 1) {
+      G.selRow = cells[idx + 1].row;
+      G.selCol = cells[idx + 1].col;
+      return;
     }
-    return;
   }
-  const cells = wordCells(w);
-  const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
-  if (idx >= 0 && idx < cells.length - 1) {
-    G.selRow = cells[idx + 1].row;
-    G.selCol = cells[idx + 1].col;
+  // 現在の単語で進めない（単語の終わり、または単語が無い）→ もう一方の方向を試す
+  const altDir = G.selDir === 'H' ? 'V' : 'H';
+  const altW = wordAt(G.selRow, G.selCol, altDir);
+  if (altW) {
+    const cells = wordCells(altW);
+    const idx = cells.findIndex(c => c.row === G.selRow && c.col === G.selCol);
+    if (idx >= 0 && idx < cells.length - 1) {
+      G.selDir = altDir;
+      G.selIdx = G.words.indexOf(altW);
+      G.selRow = cells[idx + 1].row;
+      G.selCol = cells[idx + 1].col;
+    }
   }
 }
 
@@ -889,11 +889,6 @@ const KOMOJI = {
   'や':'ゃ','ゃ':'や',
   'ゆ':'ゅ','ゅ':'ゆ',
   'よ':'ょ','ょ':'よ',
-  'あ':'ぁ','ぁ':'あ',
-  'い':'ぃ','ぃ':'い',
-  'う':'ぅ','ぅ':'う',
-  'え':'ぇ','ぇ':'え',
-  'お':'ぉ','ぉ':'お',
 };
 
 function kKo() {
