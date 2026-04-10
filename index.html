@@ -746,7 +746,9 @@ function kDaku() {
   const ch = G.input[G.selRow][G.selCol];
   if (ch && DAKU[ch]) {
     G.input[G.selRow][G.selCol] = DAKU[ch];
+    advance();
     renderAll();
+    checkDone();
     save();
   }
 }
