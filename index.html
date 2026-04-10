@@ -171,30 +171,39 @@ table#grid td.cell-hl { background: #4da8e8; }
 .clue-num { font-weight: bold; color: #c0704a; min-width: 18px; flex-shrink: 0; }
 .clue-text { color: #333; }
 
-/* ---- ACTION BAR ---- */
-#action-bar {
+/* ---- HIRAGANA KEYBOARD ---- */
+#kana-kb {
   background: #c8ccd8;
-  padding: 6px 8px 10px;
+  padding: 4px;
   border-top: 2px solid #9aa;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
   flex-shrink: 0;
 }
-#action-bar button {
+#kana-kb .kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+#kana-kb .kb-row:last-child { margin-bottom: 0; }
+#kana-kb button {
   background: white;
-  border: 1px solid #9aa;
-  border-radius: 6px;
-  font-size: 15px;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  font-size: 16px;
   font-family: inherit;
   font-weight: bold;
-  padding: 8px 18px;
+  min-width: 32px;
+  height: 36px;
   cursor: pointer;
   touch-action: manipulation;
-  box-shadow: 0 2px 0 #9aa;
+  padding: 0 2px;
 }
-#action-bar button:active { transform: translateY(2px); box-shadow: none; }
-#action-bar button.sp { background: #a8aab8; }
+#kana-kb button:active { background: #d0d0d0; }
+#kana-kb button.fn-btn {
+  background: #a8aab8;
+  font-size: 13px;
+  min-width: 48px;
+}
 
 /* ---- DONE OVERLAY ---- */
 #done {
@@ -256,11 +265,28 @@ table#grid td.cell-hl { background: #4da8e8; }
   </div>
 </div>
 
-<!-- 操作バー -->
-<div id="action-bar">
-  <button onclick="kDaku()">゛゜</button>
-  <button class="sp" onclick="kDel()">⌫ 消す</button>
-  <button onclick="kNext()">次 →</button>
+<!-- ひらがなキーボード -->
+<div id="kana-kb">
+  <div class="kb-row">
+    <button onclick="kType('あ')">あ</button><button onclick="kType('い')">い</button><button onclick="kType('う')">う</button><button onclick="kType('え')">え</button><button onclick="kType('お')">お</button>
+    <button onclick="kType('な')">な</button><button onclick="kType('に')">に</button><button onclick="kType('ぬ')">ぬ</button><button onclick="kType('ね')">ね</button><button onclick="kType('の')">の</button>
+  </div>
+  <div class="kb-row">
+    <button onclick="kType('か')">か</button><button onclick="kType('き')">き</button><button onclick="kType('く')">く</button><button onclick="kType('け')">け</button><button onclick="kType('こ')">こ</button>
+    <button onclick="kType('は')">は</button><button onclick="kType('ひ')">ひ</button><button onclick="kType('ふ')">ふ</button><button onclick="kType('へ')">へ</button><button onclick="kType('ほ')">ほ</button>
+  </div>
+  <div class="kb-row">
+    <button onclick="kType('さ')">さ</button><button onclick="kType('し')">し</button><button onclick="kType('す')">す</button><button onclick="kType('せ')">せ</button><button onclick="kType('そ')">そ</button>
+    <button onclick="kType('ま')">ま</button><button onclick="kType('み')">み</button><button onclick="kType('む')">む</button><button onclick="kType('め')">め</button><button onclick="kType('も')">も</button>
+  </div>
+  <div class="kb-row">
+    <button onclick="kType('た')">た</button><button onclick="kType('ち')">ち</button><button onclick="kType('つ')">つ</button><button onclick="kType('て')">て</button><button onclick="kType('と')">と</button>
+    <button onclick="kType('や')">や</button><button onclick="kType('ゆ')">ゆ</button><button onclick="kType('よ')">よ</button><button onclick="kType('ら')">ら</button><button onclick="kType('り')">り</button>
+  </div>
+  <div class="kb-row">
+    <button onclick="kType('る')">る</button><button onclick="kType('れ')">れ</button><button onclick="kType('ろ')">ろ</button><button onclick="kType('わ')">わ</button><button onclick="kType('を')">を</button><button onclick="kType('ん')">ん</button>
+    <button class="fn-btn" onclick="kDaku()">゛゜</button><button class="fn-btn" onclick="kDel()">⌫</button><button class="fn-btn" onclick="kNext()">次→</button>
+  </div>
 </div>
 
 </div><!-- /app -->
@@ -624,7 +650,6 @@ function cellClick(row, col) {
     }
   }
   renderAll();
-  focusInput();
 }
 
 // カギ一覧をタップ
@@ -635,7 +660,6 @@ function clueClick(idx) {
   G.selCol = w.col;
   G.selIdx = idx;
   renderAll();
-  focusInput();
 }
 
 // キーボード入力
@@ -855,93 +879,16 @@ function loadSave() {
 }
 
 // =====================================================
-// スマホキーボード（隠しinput）
+// ひらがなキーボード入力
 // =====================================================
-const hiddenInput = document.createElement('input');
-hiddenInput.type = 'text';
-hiddenInput.autocomplete = 'off';
-hiddenInput.autocorrect = 'off';
-hiddenInput.autocapitalize = 'off';
-hiddenInput.spellcheck = false;
-hiddenInput.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;font-size:16px;pointer-events:none;z-index:-1;';
-document.body.appendChild(hiddenInput);
-
-let composing = false;
-
-hiddenInput.addEventListener('compositionstart', () => {
-  composing = true;
-});
-
-hiddenInput.addEventListener('compositionend', (e) => {
-  composing = false;
-  const text = e.data || hiddenInput.value;
-  hiddenInput.value = '';
-  if (text) {
-    [...text].forEach(ch => enterChar(ch));
-    renderAll();
-    checkDone();
-    save();
-  }
-});
-
-hiddenInput.addEventListener('input', () => {
-  const val = hiddenInput.value;
-  if (!val) return;
-  // 変換中でも確定済みのかな文字があれば即反映
-  const kana = [...val].filter(ch => {
-    const h = toHira(ch);
-    return h.match(/[\u3041-\u3096]/);
-  });
-  if (kana.length > 0) {
-    hiddenInput.value = '';
-    composing = false;
-    kana.forEach(ch => enterChar(ch));
-    renderAll();
-    checkDone();
-    save();
-  } else if (!composing) {
-    hiddenInput.value = '';
-  }
-});
-
-hiddenInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Backspace' && !composing) {
-    e.preventDefault();
-    kDel();
-  }
-});
-
-// カタカナ→ひらがな変換
-function toHira(ch) {
-  return ch.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
-}
-
-function enterChar(ch) {
+function kType(ch) {
   if (G.selRow < 0 || G.grid[G.selRow][G.selCol] === null) return;
-  const hira = toHira(ch);
-  if ([...hira].length === 1 && hira.match(/[\u3041-\u3096]/)) {
-    G.input[G.selRow][G.selCol] = hira;
-    advance();
-  }
+  G.input[G.selRow][G.selCol] = ch;
+  advance();
+  renderAll();
+  checkDone();
+  save();
 }
-
-function focusInput() {
-  hiddenInput.value = '';
-  // 隠しinputを選択セルの中に配置（ブラウザがスクロールしてもセル位置に留まる）
-  const cell = document.querySelector('td.cell-hl');
-  if (cell) {
-    cell.style.position = 'relative';
-    cell.appendChild(hiddenInput);
-  }
-  hiddenInput.focus({ preventScroll: true });
-}
-
-// ページ全体のスクロールを完全に防止
-document.addEventListener('touchmove', (e) => {
-  // カギ一覧のスクロールだけ許可
-  if (e.target.closest('#clues-panel')) return;
-  e.preventDefault();
-}, { passive: false });
 
 // =====================================================
 // 起動
